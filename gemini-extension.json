@@ -1,0 +1,6 @@
+{
+  "name": "presentation-builder",
+  "description": "Builds polished standalone HTML presentations from notes, markdown, outlines, transcripts, or rough topics.",
+  "version": "1.0.0",
+  "contextFileName": "GEMINI.md"
+}

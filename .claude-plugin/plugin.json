@@ -1,0 +1,8 @@
+{
+  "name": "presentation-builder",
+  "description": "Builds polished standalone HTML presentations from notes, markdown, outlines, transcripts, or rough topics.",
+  "author": {
+    "name": "Brayan Dichtl",
+    "url": "https://github.com/brayansdt"
+  }
+}
