@@ -1,0 +1,1 @@
+/Users/bryandichtl/conductor/repos/presentation-builder/.claude/skills/gstack/connect-chrome/SKILL.md
