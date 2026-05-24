@@ -1,1 +1,0 @@
-/Users/bryandichtl/conductor/repos/presentation-builder/.claude/skills/gstack/plan-eng-review/SKILL.md

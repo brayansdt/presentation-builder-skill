@@ -1,1 +1,0 @@
-/Users/bryandichtl/conductor/repos/presentation-builder/.claude/skills/gstack/setup-gbrain/SKILL.md
