@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "presentation-builder-skill",
+  "description": "Builds polished standalone HTML presentations from notes, markdown, outlines, transcripts, or rough topics.",
+  "owner": {
+    "name": "Brayan Dichtl",
+    "url": "https://github.com/brayansdt"
+  },
+  "plugins": [
+    {
+      "name": "presentation-builder",
+      "description": "Create a standalone HTML presentation with keyboard navigation, speaker notes, and print-to-PDF support.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
