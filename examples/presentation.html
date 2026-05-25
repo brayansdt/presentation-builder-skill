@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Development at Scale</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:     #0b0f1a;
+  --text:   #eaeaea;
+  --muted:  #6b7d92;
+  --accent: #4f9cf9;
+  --border: #1c2840;
+  --card:   #111827;
+  --green:  #34d399;
+  --red:    #f87171;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; overflow: hidden; }
+.deck { position: relative; width: 100vw; height: 100vh; }
+.slide { position: absolute; inset: 0; display: none; flex-direction: column; justify-content: center; padding: 0 clamp(3rem, 10vw, 10rem); opacity: 0; transition: opacity 0.12s ease; }
+.slide.is-active { display: flex; opacity: 1; }
+
+/* Title slide */
+.slide.title { align-items: center; text-align: center; gap: 1.5rem; }
+.slide.title h1 { font-size: clamp(2.4rem, 5.5vw, 4.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; max-width: 16ch; }
+.slide.title .subtitle { font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--muted); max-width: 38ch; line-height: 1.5; }
+.slide.title .rule { width: 2.5rem; height: 3px; background: var(--accent); border-radius: 2px; }
+
+/* Argument slide — two-column */
+.slide.argument { flex-direction: row; padding: 0; align-items: stretch; }
+.slide.argument.full { flex-direction: column; padding: 0 clamp(3rem,10vw,10rem); align-items: stretch; justify-content: center; }
+.slide-text { flex: 0 0 47%; padding: 4rem 3rem 4rem clamp(4rem,8vw,8rem); display: flex; flex-direction: column; justify-content: center; }
+.slide-visual { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 2.5rem 3rem; border-left: 1px solid var(--border); background: rgba(17,24,39,0.4); }
+.slide.argument h2 { font-size: clamp(1.35rem,2.3vw,2.1rem); font-weight: 700; letter-spacing: -0.025em; line-height: 1.2; max-width: 30ch; margin-bottom: 1.5rem; }
+.slide.argument.full h2 { font-size: clamp(1.5rem,2.6vw,2.4rem); max-width: 32ch; margin-bottom: 2rem; }
+.slide.argument h2 .accent-line { display: block; width: 3rem; height: 3px; background: var(--accent); border-radius: 2px; margin-bottom: 1.1rem; }
+.slide.argument ul { list-style: none; display: flex; flex-direction: column; gap: 0.8rem; }
+.slide.argument li { font-size: clamp(0.85rem,1.35vw,1.05rem); color: var(--muted); line-height: 1.55; padding-left: 1.5em; position: relative; }
+.slide.argument li::before { content: "—"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+.slide.argument li strong { color: var(--text); font-weight: 700; }
+.slide.argument li code { font-family: ui-monospace,"Fira Code",monospace; font-size: 0.88em; background: var(--card); padding: 0.1em 0.4em; border-radius: 3px; color: var(--accent); border: 1px solid var(--border); }
+.slide.argument .callout { margin-top: 1.5rem; padding: 0.85rem 1.2rem; border-left: 3px solid var(--accent); background: var(--card); font-size: clamp(0.78rem,1.15vw,0.92rem); color: var(--muted); font-style: italic; border-radius: 0 6px 6px 0; line-height: 1.6; }
+.slide.argument .callout cite { display: block; margin-top: 0.4rem; font-style: normal; font-size: 0.82em; color: var(--accent); opacity: 0.7; }
+
+/* Right-panel visual component library */
+.stat-stack { display: flex; flex-direction: column; gap: 1.6rem; align-items: center; text-align: center; }
+.stat-item { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+.stat-divider { width: 36px; height: 1px; background: var(--border); }
+.stat-num { font-size: clamp(2rem,4.5vw,3.8rem); font-weight: 800; letter-spacing: -0.04em; color: var(--accent); line-height: 1; }
+.stat-label { font-size: clamp(0.62rem,0.88vw,0.76rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.13em; color: var(--muted); max-width: 22ch; text-align: center; }
+.score-bars { display: flex; flex-direction: column; gap: 1.6rem; width: 100%; max-width: 22rem; }
+.score-bar-row { display: flex; flex-direction: column; gap: 0.45rem; }
+.score-bar-header { font-size: 0.75rem; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+.score-bar-header .bar-score { color: var(--text); font-weight: 700; }
+.score-bar-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.score-bar-fill { height: 100%; border-radius: 3px; background: rgba(107,125,146,0.45); }
+.score-bar-fill.leader { background: var(--accent); }
+.score-bar-fill.good { background: var(--green); }
+.timeline-wrap { display: flex; flex-direction: column; }
+.tl-item { display: flex; gap: 1.2rem; align-items: flex-start; }
+.tl-marker { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-top: 0.1rem; }
+.tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.tl-line { width: 1px; height: 2.2rem; background: var(--border); margin-top: 4px; }
+.tl-body { display: flex; flex-direction: column; gap: 0.2rem; padding-bottom: 1.8rem; }
+.tl-when { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); }
+.tl-what { font-size: 0.82rem; color: var(--muted); line-height: 1.45; max-width: 26ch; }
+
+/* Four-pillar grid */
+.pillar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+.pillar-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.4rem 1.6rem; display: flex; flex-direction: column; gap: 0.6rem; transition: border-color 0.15s; }
+.pillar-card:hover { border-color: rgba(79,156,249,0.35); }
+.pillar-tag { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); }
+.pillar-title { font-size: clamp(0.85rem,1.2vw,1rem); font-weight: 700; color: var(--text); }
+.pillar-desc { font-size: clamp(0.75rem,1vw,0.88rem); color: var(--muted); line-height: 1.55; }
+
+/* Evidence slide */
+.slide.evidence { align-items: center; text-align: center; gap: 2rem; }
+.slide.evidence .label { font-size: clamp(0.7rem, 1.1vw, 0.85rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--green); }
+.slide.evidence .quote { font-size: clamp(1.5rem, 2.8vw, 2.4rem); font-weight: 500; line-height: 1.4; max-width: 28ch; color: var(--text); }
+.slide.evidence .quote::before { content: "\201C"; color: var(--green); opacity: 0.6; }
+.slide.evidence .quote::after  { content: "\201D"; color: var(--green); opacity: 0.6; }
+.slide.evidence .attribution { font-size: clamp(0.8rem, 1.3vw, 1rem); color: var(--muted); font-style: italic; }
+
+/* Notes panel */
+.notes-panel { position: fixed; bottom: 2.6rem; left: 0; right: 0; background: rgba(5,8,18,0.97); border-top: 1px solid var(--border); padding: 1rem clamp(3rem, 10vw, 10rem); font-size: 0.875rem; color: var(--muted); line-height: 1.65; transform: translateY(100%); transition: transform 0.18s ease; z-index: 50; max-height: 30vh; overflow-y: auto; }
+.notes-panel.open { transform: translateY(0); }
+.notes-label { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
+
+/* UI bar */
+.ui-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 2.6rem; display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(3rem, 10vw, 10rem); background: rgba(11,15,26,0.92); backdrop-filter: blur(8px); border-top: 1px solid var(--border); z-index: 40; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.02em; }
+.counter { font-variant-numeric: tabular-nums; }
+.hints { display: flex; gap: 1.2rem; opacity: 0.5; }
+.hint { display: flex; gap: 0.3rem; align-items: center; }
+kbd { display: inline-block; padding: 0.08em 0.4em; border: 1px solid var(--border); border-radius: 3px; font-family: inherit; font-size: 0.65rem; background: rgba(255,255,255,0.04); }
+
+/* Progress bar */
+.progress-bar { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.05); z-index: 40; }
+.progress-fill { height: 100%; background: var(--accent); transition: width 0.18s ease; }
+
+/* Print */
+@media print {
+  html, body { overflow: visible; height: auto; background: #fff; color: #111; }
+  .ui-bar, .progress-bar, .notes-panel { display: none !important; }
+  .deck { width: 100%; height: auto; position: static; }
+  .slide { position: relative !important; display: flex !important; width: 100%; aspect-ratio: 16/9; padding: 3rem 6rem; opacity: 1 !important; background: #fff; color: #111; break-after: page; page-break-after: always; }
+  @page { size: landscape; margin: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+<div class="deck" id="deck">
+
+  <!-- Slide 1: Title -->
+  <section class="slide title is-active"
+    data-notes="Welcome. This talk is not about whether to use AI — that question is settled. It is about how to use AI well across a complex, multi-repo engineering organization without creating the kind of architectural chaos that takes years to clean up. We are going to be practical and specific.">
+    <h1>AI Development at Scale</h1>
+    <p class="subtitle">How engineering teams move faster without losing architectural control</p>
+    <div class="rule"></div>
+  </section>
+
+  <!-- Slide 2: AI Amplifies -->
+  <section class="slide argument"
+    data-notes="The AI tool is not the variable. Your engineering culture is the variable. AI is an amplifier. A team with clear conventions, good review discipline, and documented architecture will get dramatically better with AI. A team without those things will produce the same mess — just faster, at higher volume, and with more confidence.">
+    <div class="slide-text">
+      <h2><span class="accent-line"></span>AI amplifies what you already have — good habits and bad ones</h2>
+      <ul>
+        <li>A team with clear conventions <strong>ships faster</strong> with AI. A team without ships chaos, faster.</li>
+        <li>Treating AI as a productivity layer on top of an undisciplined process is the core mistake</li>
+        <li>Engineering culture does not become less important with AI — it becomes <strong>more consequential</strong></li>
+        <li>The output ceiling is still engineering judgment, even when the floor is much higher</li>
+      </ul>
+    </div>
+    <div class="slide-visual">
+      <div class="stat-stack">
+        <div class="stat-item">
+          <div class="stat-num" style="color:var(--green)">&#8593;</div>
+          <div class="stat-label">Good patterns propagate faster</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-num" style="color:var(--red)">&#8593;</div>
+          <div class="stat-label">Bad patterns propagate faster too</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-num">&#8776; Same</div>
+          <div class="stat-label">Architectural discipline required</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 3: The Hard Part -->
+  <section class="slide argument"
+    data-notes="Every engineer in the room can generate a working REST endpoint in under a minute with AI. That is table stakes now. The hard problem — and this is the one AI does not solve — is whether that endpoint belongs to the same architectural family as the other 200 endpoints in your system. Cross-repo consistency is a human coordination problem. AI does not make it easier on its own.">
+    <div class="slide-text">
+      <h2><span class="accent-line"></span>Generating code is solved. Keeping your architecture coherent is not.</h2>
+      <ul>
+        <li>Any capable model writes a working endpoint in seconds — that is <strong>table stakes</strong> now</li>
+        <li>The hard problem is cross-repo consistency, naming conventions, and shared abstractions</li>
+        <li>Inconsistent architecture is invisible until it is not — and then it is a rewrite</li>
+        <li>Multi-repo organizations have <strong>compounding drift risk</strong> that single-repo teams do not</li>
+      </ul>
+    </div>
+    <div class="slide-visual">
+      <div class="score-bars">
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Code generation speed</span><span class="bar-score">transformed</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill leader" style="width:95%"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Cross-repo consistency</span><span class="bar-score">unchanged</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:40%"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Architectural coherence</span><span class="bar-score">unchanged</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:35%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 4: Multi-Repo Reality -->
+  <section class="slide argument"
+    data-notes="The model is stateless. Your organization is not. When an engineer in Repo A worked out the right pattern for authentication six months ago, the AI working in Repo D today has no idea that decision was ever made. You have to bridge that gap explicitly — with context injection, shared documentation, canonical examples, or all three. Hoping the AI figures it out is not a strategy.">
+    <div class="slide-text">
+      <h2><span class="accent-line"></span>In a multi-repo org, AI has no memory of the decisions you made last quarter</h2>
+      <ul>
+        <li>Context is per-session — the AI does not remember the <strong>ADR you wrote in February</strong></li>
+        <li>Without explicit context, AI defaults to common patterns, not <em>your</em> patterns</li>
+        <li>Each repo becomes a slightly different interpretation of the same intent</li>
+        <li>What starts as a style difference becomes an <strong>integration failure</strong> at the boundary</li>
+      </ul>
+    </div>
+    <div class="slide-visual">
+      <div class="timeline-wrap">
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Repo A &mdash; Auth service</div>
+            <div class="tl-what">Decision made: JWT with short-lived tokens, refresh pattern documented in ADR-14</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Repo B &mdash; 3 months later</div>
+            <div class="tl-what">AI generates session-based auth. Looks fine. Nobody flags it. Shipped.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Integration &mdash; 6 months later</div>
+            <div class="tl-what">Two incompatible auth systems. Rewrite required. Origin: a prompt with no context.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 5: What Teams Get Wrong -->
+  <section class="slide argument"
+    data-notes="This is the most common failure mode. Teams adopt the tool in week one. They write governance documentation in month six, if at all. The result is a period of fast, inconsistent output that looks like progress and feels like momentum — until it compounds into debt. The fix is not to slow adoption. It is to front-load the conventions work. Write them now, before the drift sets in.">
+    <div class="slide-text">
+      <h2><span class="accent-line"></span>Most teams adopted AI tools before they adopted AI conventions</h2>
+      <ul>
+        <li>Ad-hoc prompting produces ad-hoc output — it just produces it <strong>faster</strong></li>
+        <li>Without shared prompts, every engineer makes different assumptions about what "good" looks like</li>
+        <li>Without guardrails, AI helps junior engineers move fast <strong>in the wrong direction</strong></li>
+        <li>The cost of inconsistency compounds across every PR, every dependency, every deploy</li>
+      </ul>
+      <blockquote class="callout">Speed without structure produces volume, not quality. AI-generated drift is the new technical debt — and it accumulates faster.</blockquote>
+    </div>
+    <div class="slide-visual">
+      <div class="score-bars">
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>AI tool adoption</span><span class="bar-score">high</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill leader" style="width:88%"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Shared prompt library</span><span class="bar-score">rare</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:14%"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>AI-specific review criteria</span><span class="bar-score">rare</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:17%"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Documented conventions</span><span class="bar-score">partial</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:44%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 6: The Four Pillars (full-width grid) -->
+  <section class="slide argument full"
+    data-notes="You do not need to build a new process. You need to make your existing standards machine-readable. If your conventions are not documented well enough for a new engineer to follow them, they are not documented well enough for AI either. These four artifacts close the gap. Start with whichever one your team most visibly lacks — that gap is usually the source of your current drift.">
+    <h2><span class="accent-line"></span>Architectural control comes from codifying what your team already knows</h2>
+    <div class="pillar-grid">
+      <div class="pillar-card">
+        <div class="pillar-tag">01 &middot; Shared Prompts</div>
+        <div class="pillar-title">Reusable prompt templates</div>
+        <div class="pillar-desc">Team-approved prompts that embed your conventions, your stack, and your non-obvious decisions. Reduces drift at the source before the first line is generated.</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-tag">02 &middot; Decision Records</div>
+        <div class="pillar-title">Architecture Decision Records (ADRs)</div>
+        <div class="pillar-desc">Structured docs that give AI the context it does not have by default — why you chose Postgres over MongoDB, why you avoided GraphQL here, what the non-obvious constraint is.</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-tag">03 &middot; Code Examples</div>
+        <div class="pillar-title">Canonical reference implementations</div>
+        <div class="pillar-desc">Approved examples AI can reference and replicate. Not what the model thinks is typical — what your team has decided is correct for this system.</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-tag">04 &middot; Review Guardrails</div>
+        <div class="pillar-title">Explicit AI-PR review criteria</div>
+        <div class="pillar-desc">Clear, written criteria for what AI-generated code must pass before merge: scope boundaries, dependency rules, test coverage floors, architectural boundary checks.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 7: Review Discipline -->
+  <section class="slide argument"
+    data-notes="The most dangerous thing about AI-generated code is that it looks clean. Reviewers are pattern-matching against surface signals — formatting, naming, structure. AI passes all of those. The logic errors, the architectural violations, the missing edge cases — they are still there, just better dressed. Establish explicit review criteria that go beyond aesthetics, especially at the boundaries between systems.">
+    <div class="slide-text">
+      <h2><span class="accent-line"></span>AI-generated code demands higher review discipline, not lower</h2>
+      <ul>
+        <li>Reviewers skip reading what <strong>looks clean</strong> — AI code always looks clean</li>
+        <li>The logic errors, architectural violations, and missing edge cases are still there</li>
+        <li>Define explicit criteria for AI PRs: <strong>scope, dependencies, test coverage</strong></li>
+        <li>Raise the bar hardest at the architectural boundary: shared libs, public APIs, cross-service contracts</li>
+      </ul>
+    </div>
+    <div class="slide-visual">
+      <div class="score-bars">
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Code style and formatting</span><span class="bar-score">AI handles it</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill leader" style="width:93%"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Scope validation</span><span class="bar-score">humans only</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:20%"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Architectural fit</span><span class="bar-score">humans only</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:15%"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-header"><span>Cross-repo impact</span><span class="bar-score">humans only</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:10%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 8: Three Starting Artifacts -->
+  <section class="slide argument"
+    data-notes="The conventions doc is often the most revealing exercise. When you try to write it, you find out how much of your architecture lives as tribal knowledge. That is what AI exposes: the gap between what you think is documented and what actually is. The prompt library and review checklist build on top of that foundation. Start with the conventions doc. Everything else follows from it.">
+    <div class="slide-text">
+      <h2><span class="accent-line"></span>Every team can build three governance artifacts in one sprint</h2>
+      <ul>
+        <li><strong>Conventions doc:</strong> your patterns, your non-obvious decisions, and the reasoning behind them</li>
+        <li><strong>Prompt library:</strong> 5–10 tested, team-approved prompts for your most common tasks</li>
+        <li><strong>Review checklist:</strong> explicit pass criteria for architecture, scope, and coverage on AI PRs</li>
+        <li>A working draft shipped this sprint is worth more than a perfect policy written next quarter</li>
+      </ul>
+    </div>
+    <div class="slide-visual">
+      <div class="timeline-wrap">
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Day 1&ndash;2 &middot; Conventions</div>
+            <div class="tl-what">Write it from memory. Where the team disagrees is where you need clarity most.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Day 3&ndash;4 &middot; Prompt Library</div>
+            <div class="tl-what">Build from your most common AI tasks. Test each prompt on a real task before approving it.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Day 5 &middot; Review Checklist</div>
+            <div class="tl-what">Draft it, then ship it with your next AI-generated PR. It will improve immediately.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 9: The Rollout -->
+  <section class="slide argument"
+    data-notes="Phase 1 is about understanding, not restriction. You need to know where AI is being used today before you can govern it. Phase 2 is a controlled experiment — one team, new conventions, measurable outcome. Do not scale until the pilot proves the framework works. The biggest risk is deploying a governance layer that is too broad, too strict, or solving the wrong problem. The pilot tells you which of those you built.">
+    <div class="slide-text">
+      <h2><span class="accent-line"></span>A three-phase path from ad-hoc AI to governed AI development</h2>
+      <ul>
+        <li><strong>Audit:</strong> map where AI is used today and identify the patterns of drift</li>
+        <li><strong>Pilot:</strong> build the four artifacts and run one team on the new conventions for 4–6 weeks</li>
+        <li><strong>Scale:</strong> propagate conventions, instrument for compliance, iterate on what breaks</li>
+        <li>Measure <strong>architecture coherence</strong> across repos — not PR velocity or line count</li>
+      </ul>
+    </div>
+    <div class="slide-visual">
+      <div class="timeline-wrap">
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Phase 1 &middot; Audit</div>
+            <div class="tl-what">Map AI usage across repos. Surface undocumented decisions and consistency gaps.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Phase 2 &middot; Build &amp; Pilot</div>
+            <div class="tl-what">Create the four artifacts. Run one pilot team for 4&ndash;6 weeks. Measure what improves.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-marker"><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="tl-when">Phase 3 &middot; Scale</div>
+            <div class="tl-what">Propagate to all teams. Add tooling for convention compliance. Revisit quarterly.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 10: Closing -->
+  <section class="slide evidence"
+    data-notes="Close with this. The teams that win with AI are not the ones that generate the most code. They are the ones that maintain the clearest sense of where they are going and why. AI raises the floor of what every engineer can produce. Engineering judgment sets the ceiling of what is actually worth building and shipping. Your job as a technical leader is to protect that ceiling while letting the floor rise.">
+    <p class="label">The bottom line</p>
+    <p class="quote">The goal is not to replace engineers. It is to raise the quality and speed of execution — without outsourcing the architectural judgment that makes it last.</p>
+    <p class="attribution">— AI Development at Scale</p>
+  </section>
+
+</div>
+
+<div class="notes-panel" id="notes-panel">
+  <div class="notes-label">Speaker notes</div>
+  <p id="notes-text"></p>
+</div>
+
+<div class="ui-bar">
+  <div class="counter" id="counter">Slide 1 of 10</div>
+  <div class="hints">
+    <span class="hint"><kbd>&#8592;</kbd><kbd>&#8594;</kbd> navigate</span>
+    <span class="hint"><kbd>N</kbd> notes</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const progressFill = document.getElementById('progress-fill');
+  const counter = document.getElementById('counter');
+  const notesPanel = document.getElementById('notes-panel');
+  const notesText = document.getElementById('notes-text');
+  let idx = 0, notesOpen = false;
+
+  function show(n) {
+    idx = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('is-active', i === idx));
+    progressFill.style.width = ((idx + 1) / slides.length * 100).toFixed(1) + '%';
+    counter.textContent = 'Slide ' + (idx + 1) + ' of ' + slides.length;
+    notesText.textContent = slides[idx].dataset.notes || '(no notes)';
+  }
+
+  function toggleNotes() {
+    notesOpen = !notesOpen;
+    notesPanel.classList.toggle('open', notesOpen);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); show(idx + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); show(idx - 1); }
+    else if (e.key === 'n' || e.key === 'N') toggleNotes();
+    else if (e.key === 'Escape' && notesOpen) toggleNotes();
+  });
+
+  document.getElementById('deck').addEventListener('click', e => {
+    if (!e.target.closest('button, a')) show(idx + 1);
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>
